@@ -239,21 +239,22 @@ namespace ssemath
 		//retval = x;
 		//*intpart = _mm_zero;
 
-		__m128i maskbits = _mm_sub_epi32( modf23, exponent );
-		maskmb.i = _mm_cmpgt_epi32( maskbits, modfzero );
+		ssevector maskbits;
+                maskbits.m128i = _mm_sub_epi32( modf23, exponent );
+		maskmb.i = _mm_cmpgt_epi32( maskbits.m128i, modfzero );
 		
 		retval = _mm_select_ps( _mm_zero, x, maskmb.f );
 		*intpart = _mm_select_ps( x, _mm_zero, maskmb.f );
 		
 		retmask.i = _mm_or_si128( maskmb.i, retmask.i );
 
-		__m128i t;
-		t.m128i_i32[0] = 1 << (maskbits.m128i_i32[0]);
-		t.m128i_i32[1] = 1 << (maskbits.m128i_i32[1]);
-		t.m128i_i32[2] = 1 << (maskbits.m128i_i32[2]);
-		t.m128i_i32[3] = 1 << (maskbits.m128i_i32[3]);
+		ssevector t;
+		t.i32[0] = 1 << (maskbits.i32[0]);
+		t.i32[1] = 1 << (maskbits.i32[1]);
+		t.i32[2] = 1 << (maskbits.i32[2]);
+		t.i32[3] = 1 << (maskbits.i32[3]);
 
-		v.i = _mm_andnot_si128( v.i, _mm_sub_epi32( t, modfone ) );
+		v.i = _mm_andnot_si128( v.i, _mm_sub_epi32( t.m128i, modfone ) );
 
 		*intpart = _mm_select_ps( *intpart, v.f, retmask.f );
 		return _mm_select_ps( retval, _mm_sub_ps( x, v.f ), retmask.f );
@@ -523,7 +524,7 @@ namespace ssemath
 	/*****************************************************************************/
 	// Pow
 
-	static const __m128 powA[] = {
+	static const ssevector powA[] = {
 		_mm_set1_ps( 1.00000000000000000000E0f ),
 		_mm_set1_ps( 9.57603275775909423828125E-1f ),
 		_mm_set1_ps( 9.17004048824310302734375E-1f ),
@@ -543,7 +544,7 @@ namespace ssemath
 		_mm_set1_ps( 5.00000000000000000000E-1f )
 	};
 
-	static const __m128 powB[] = {
+	static const ssevector powB[] = {
 		_mm_set1_ps( 0.00000000000000000000E0f ),
 		_mm_set1_ps( -5.61963907099083340520586E-9f ),
 		_mm_set1_ps( -1.23776636307969995237668E-8f ),
@@ -555,7 +556,7 @@ namespace ssemath
 		_mm_set1_ps( 0.00000000000000000000E0f )
 	};
 
-	static const __m128 powAinv[] = {
+	static const ssevector powAinv[] = {
 		_mm_set1_ps( 1.00000000000000000000000E0f ),
 		_mm_set1_ps( 1.04427378242741384032197E0f ),
 		_mm_set1_ps( 1.09050773266525765920701E0f ),
@@ -603,131 +604,131 @@ namespace ssemath
 
 	__m128 _mm_pow_ps( __m128 x, __m128 y )
 	{
-		__m128 w, z, ya, yb, retval, retmask;
-		__m128 F, Fa, Fb, G, Ga, Gb, H, Ha, Hb, nflg, A, B, Ainv;
-		__m128i e, i;
+		__m128 z, ya, yb, retval, retmask;
+		__m128 F, Fa, Fb, G, Ga, Gb, H, Ha, Hb, nflg;
+                ssevector i, A, B, Ainv, e, w;
 
 		//w = _mm_floor_ps( y );
-		w = _mm_cvtepi32_ps( _mm_cvttps_epi32( y ) );
-		z = _mm_abs_ps( w );
+		w.m128 = _mm_cvtepi32_ps( _mm_cvttps_epi32( y ) );
+		z = _mm_abs_ps( w.m128 );
 
 		retmask = _mm_cmpeq_ps( x, _mm_zero );
 		retval = _mm_select_ps( _mm_one, _mm_zero, _mm_and_ps( _mm_cmpeq_ps( y, _mm_zero ), retmask ) );
 		nflg = _mm_cmplt_ps( x, _mm_zero );
-		retmask = _mm_or_ps( _mm_and_ps( _mm_xor_ps( _mm_cmpeq_ps( w, y ), _mmi_minusone ), nflg ), retmask );
+		retmask = _mm_or_ps( _mm_and_ps( _mm_xor_ps( _mm_cmpeq_ps( w.m128, y ), _mmi_minusone ), nflg ), retmask );
 
 		x = _mm_abs_ps( x );
-		x = _mm_frexp_ps( x, &e );
+		x = _mm_frexp_ps( x, &e.m128i );
 
-		SSEDirtyTypeCast mask;
-		mask.f = _mm_cmple_ps( x, powA[9] );
-		i = _mm_select_epi( powinine, powione, mask.i );
+		ssevector mask;
+		mask.m128 = _mm_cmple_ps( x, powA[9].m128 );
+		i.m128i = _mm_select_epi( powinine, powione, mask.m128i );
 
 		// gather
-		A.m128_f32[0] = powA[i.m128i_i32[0]+4].m128_f32[0];
-		A.m128_f32[1] = powA[i.m128i_i32[1]+4].m128_f32[0];
-		A.m128_f32[2] = powA[i.m128i_i32[2]+4].m128_f32[0];
-		A.m128_f32[3] = powA[i.m128i_i32[3]+4].m128_f32[0];
+		A.f32[0] = powA[i.i32[0]+4].f32[0];
+		A.f32[1] = powA[i.i32[1]+4].f32[0];
+		A.f32[2] = powA[i.i32[2]+4].f32[0];
+		A.f32[3] = powA[i.i32[3]+4].f32[0];
 
-		mask.f = _mm_cmple_ps( x, A );
-		i = _mm_select_epi( _mm_add_epi32( i, powifour ), i, mask.i );
+		mask.m128 = _mm_cmple_ps( x, A.m128 );
+		i.m128i = _mm_select_epi( _mm_add_epi32( i.m128i, powifour ), i.m128i, mask.m128i );
 
-		A.m128_f32[0] = powA[i.m128i_i32[0]+2].m128_f32[0];
-		A.m128_f32[1] = powA[i.m128i_i32[1]+2].m128_f32[0];
-		A.m128_f32[2] = powA[i.m128i_i32[2]+2].m128_f32[0];
-		A.m128_f32[3] = powA[i.m128i_i32[3]+2].m128_f32[0];
+		A.f32[0] = powA[i.i32[0]+2].f32[0];
+		A.f32[1] = powA[i.i32[1]+2].f32[0];
+		A.f32[2] = powA[i.i32[2]+2].f32[0];
+		A.f32[3] = powA[i.i32[3]+2].f32[0];
 
-		mask.f = _mm_cmple_ps( x, A );
-		i = _mm_select_epi( _mm_add_epi32( i, powitwo ), i, mask.i );
-		mask.f = _mm_cmpge_ps( x, powA[1] );
-		i = _mm_select_epi( powiminusone, i, mask.i );
-		i = _mm_add_epi32( i, powione );
+		mask.m128 = _mm_cmple_ps( x, A.m128 );
+		i.m128i = _mm_select_epi( _mm_add_epi32( i.m128i, powitwo ), i.m128i, mask.m128i );
+		mask.m128 = _mm_cmpge_ps( x, powA[1].m128 );
+		i.m128i = _mm_select_epi( powiminusone, i.m128i, mask.m128i );
+		i.m128i = _mm_add_epi32( i.m128i, powione );
 
-		A.m128_f32[0] = powA[i.m128i_i32[0]].m128_f32[0];
-		A.m128_f32[1] = powA[i.m128i_i32[1]].m128_f32[0];
-		A.m128_f32[2] = powA[i.m128i_i32[2]].m128_f32[0];
-		A.m128_f32[3] = powA[i.m128i_i32[3]].m128_f32[0];
+		A.f32[0] = powA[i.i32[0]].f32[0];
+		A.f32[1] = powA[i.i32[1]].f32[0];
+		A.f32[2] = powA[i.i32[2]].f32[0];
+		A.f32[3] = powA[i.i32[3]].f32[0];
 
-		x = _mm_sub_ps( x, A );
+		x = _mm_sub_ps( x, A.m128 );
 
-		B.m128_f32[0] = powB[i.m128i_i32[0]>>1].m128_f32[0];
-		B.m128_f32[1] = powB[i.m128i_i32[1]>>1].m128_f32[0];
-		B.m128_f32[2] = powB[i.m128i_i32[2]>>1].m128_f32[0];
-		B.m128_f32[3] = powB[i.m128i_i32[3]>>1].m128_f32[0];
+		B.f32[0] = powB[i.i32[0]>>1].f32[0];
+		B.f32[1] = powB[i.i32[1]>>1].f32[0];
+		B.f32[2] = powB[i.i32[2]>>1].f32[0];
+		B.f32[3] = powB[i.i32[3]>>1].f32[0];
 
-		x = _mm_sub_ps( x, B );
+		x = _mm_sub_ps( x, B.m128 );
 
-		Ainv.m128_f32[0] = powAinv[i.m128i_i32[0]].m128_f32[0];
-		Ainv.m128_f32[1] = powAinv[i.m128i_i32[1]].m128_f32[0];
-		Ainv.m128_f32[2] = powAinv[i.m128i_i32[2]].m128_f32[0];
-		Ainv.m128_f32[3] = powAinv[i.m128i_i32[3]].m128_f32[0];
+		Ainv.f32[0] = powAinv[i.i32[0]].f32[0];
+		Ainv.f32[1] = powAinv[i.i32[1]].f32[0];
+		Ainv.f32[2] = powAinv[i.i32[2]].f32[0];
+		Ainv.f32[3] = powAinv[i.i32[3]].f32[0];
 
-		x = _mm_mul_ps( x, Ainv );
+		x = _mm_mul_ps( x, Ainv.m128 );
 
 
 		z = _mm_mul_ps( x, x );
-		w = _mm_mul_ps( _mm_mul_ps( _mm_add_ps( _mm_mul_ps( _mm_add_ps( _mm_mul_ps( _mm_add_ps( _mm_mul_ps( powC1, x ), powC2 ), x ), powC3 ), x ), powC4 ), x ), z );
-		w = _mm_sub_ps( w, _mm_mul_ps( _mm_half, z ) );
-		w = _mm_add_ps( w, _mm_mul_ps( powLOG2EA, w ) );
+		w.m128 = _mm_mul_ps( _mm_mul_ps( _mm_add_ps( _mm_mul_ps( _mm_add_ps( _mm_mul_ps( _mm_add_ps( _mm_mul_ps( powC1, x ), powC2 ), x ), powC3 ), x ), powC4 ), x ), z );
+		w.m128 = _mm_sub_ps( w.m128, _mm_mul_ps( _mm_half, z ) );
+		w.m128 = _mm_add_ps( w.m128, _mm_mul_ps( powLOG2EA, w.m128 ) );
 
-		z = _mm_add_ps( w, _mm_mul_ps( powLOG2EA, x ) );
+		z = _mm_add_ps( w.m128, _mm_mul_ps( powLOG2EA, x ) );
 		z = _mm_add_ps( z, x );
 
-		w = _mm_sub_ps( _mm_zero, _mm_cvtepi32_ps( i ) );
-		w = _mm_mul_ps( powi16, w );
-		w = _mm_add_ps( w, _mm_cvtepi32_ps( e ) );
+		w.m128 = _mm_sub_ps( _mm_zero, _mm_cvtepi32_ps( i.m128i ) );
+		w.m128 = _mm_mul_ps( powi16, w.m128 );
+		w.m128 = _mm_add_ps( w.m128, _mm_cvtepi32_ps( e.m128i ) );
 
 		ya = reduc( y );
 		yb = _mm_sub_ps( y, ya );
 
-		F = _mm_add_ps( _mm_mul_ps( z, y ), _mm_mul_ps( w, yb ) );
+		F = _mm_add_ps( _mm_mul_ps( z, y ), _mm_mul_ps( w.m128, yb ) );
 		Fa = reduc( F );
 		Fb = _mm_sub_ps( F, Fa );
 
-		G = _mm_add_ps( Fa, _mm_mul_ps( w, ya ) );
+		G = _mm_add_ps( Fa, _mm_mul_ps( w.m128, ya ) );
 		Ga = reduc( G );
 		Gb = _mm_sub_ps( G, Ga );
 
 		H = _mm_add_ps( Fb, Gb );
 		Ha = reduc( H );
-		w = _mm_mul_ps( pow16, _mm_add_ps( Ga, Ha ) );
+		w.m128 = _mm_mul_ps( pow16, _mm_add_ps( Ga, Ha ) );
 
-		mask.f = _mm_cmpgt_ps( w, powMEXP );
-		retval = _mm_select_ps( expmaxfloat, retval, _mm_andnot_ps( mask.f, retmask ) );
-		retmask = _mm_or_ps( mask.f, retmask );
-		w = _mm_select_ps( powMEXP, w, mask.f );
+		mask.m128 = _mm_cmpgt_ps( w.m128, powMEXP );
+		retval = _mm_select_ps( expmaxfloat, retval, _mm_andnot_ps( mask.m128, retmask ) );
+		retmask = _mm_or_ps( mask.m128, retmask );
+		w.m128 = _mm_select_ps( powMEXP, w.m128, mask.m128 );
 
-		mask.f = _mm_cmplt_ps( w, powMNEXP );
-		retval = _mm_select_ps( _mm_zero, retval, _mm_andnot_ps( mask.f, retmask ) );
-		retmask = _mm_or_ps( mask.f, retmask );
-		w = _mm_select_ps( powMNEXP, w, mask.f );
+		mask.m128 = _mm_cmplt_ps( w.m128, powMNEXP );
+		retval = _mm_select_ps( _mm_zero, retval, _mm_andnot_ps( mask.m128, retmask ) );
+		retmask = _mm_or_ps( mask.m128, retmask );
+		w.m128 = _mm_select_ps( powMNEXP, w.m128, mask.m128 );
 
-		e = _mm_cvttps_epi32( w );
+		e.m128i = _mm_cvttps_epi32( w.m128 );
 		Hb = _mm_sub_ps( H, Ha );
 
-		mask.f = _mm_cmpgt_ps( Hb, _mm_zero );
-		e = _mm_select_epi( _mm_add_epi32( e, powione ), e, mask.i );
-		Hb = _mm_select_ps( _mm_sub_ps( Hb, powi16 ), Hb, mask.f );
+		mask.m128 = _mm_cmpgt_ps( Hb, _mm_zero );
+		e.m128i = _mm_select_epi( _mm_add_epi32( e.m128i, powione ), e.m128i, mask.m128i );
+		Hb = _mm_select_ps( _mm_sub_ps( Hb, powi16 ), Hb, mask.m128 );
 
 
 		z = _mm_mul_ps( _mm_add_ps( _mm_mul_ps( _mm_add_ps( _mm_mul_ps( _mm_add_ps( _mm_mul_ps( powD1, Hb ), powD2 ), Hb ), powD3 ), Hb ), powD4 ), Hb );
 
 
-		i = _mm_select_epi( _mm_sub_epi32( powizero, _mm_srli_epi32( _mm_sub_epi32( powizero, e ), 4 ) ), 
-							_mm_add_epi32( _mm_srli_epi32( e, 4 ), powione ), _mm_cmplt_epi32( e, powizero ) );
-		e = _mm_sub_epi32( _mm_slli_epi32( i, 4 ), e );
+		i.m128i = _mm_select_epi( _mm_sub_epi32( powizero, _mm_srli_epi32( _mm_sub_epi32( powizero, e.m128i ), 4 ) ), 
+							_mm_add_epi32( _mm_srli_epi32( e.m128i, 4 ), powione ), _mm_cmplt_epi32( e.m128i, powizero ) );
+		e.m128i = _mm_sub_epi32( _mm_slli_epi32( i.m128i, 4 ), e.m128i );
 
-		w.m128_f32[0] = powA[e.m128i_i32[0]].m128_f32[0];
-		w.m128_f32[1] = powA[e.m128i_i32[1]].m128_f32[0];
-		w.m128_f32[2] = powA[e.m128i_i32[2]].m128_f32[0];
-		w.m128_f32[3] = powA[e.m128i_i32[3]].m128_f32[0];
+		w.f32[0] = powA[e.i32[0]].f32[0];
+		w.f32[1] = powA[e.i32[1]].f32[0];
+		w.f32[2] = powA[e.i32[2]].f32[0];
+		w.f32[3] = powA[e.i32[3]].f32[0];
 		
-		z = _mm_add_ps( w, _mm_mul_ps( w, z ) );
-		z = _mm_ldexp_ps( z, i );
+		z = _mm_add_ps( w.m128, _mm_mul_ps( w.m128, z ) );
+		z = _mm_ldexp_ps( z, i.m128i );
 
-		w = _mm_cvtepi32_ps( _mm_cvttps_epi32( _mm_mul_ps( _mm_half, w ) ) );
-		w = _mm_add_ps( w, w );
-		z = _mm_select_ps( _mm_sub_ps( _mm_zero, z ), z, _mm_andnot_ps( nflg, _mm_cmpeq_ps( w, y ) ) );
+		w.m128 = _mm_cvtepi32_ps( _mm_cvttps_epi32( _mm_mul_ps( _mm_half, w.m128 ) ) );
+		w.m128 = _mm_add_ps( w.m128, w.m128 );
+		z = _mm_select_ps( _mm_sub_ps( _mm_zero, z ), z, _mm_andnot_ps( nflg, _mm_cmpeq_ps( w.m128, y ) ) );
 
 		return _mm_select_ps( retval, z, retmask );
 	}
