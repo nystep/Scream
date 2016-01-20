@@ -14,6 +14,9 @@
 #ifndef LAYERPARAM_H
 #define LAYERPARAM_H
 
+#include "blendMode.h"
+#include "smath.h"
+
 namespace SCore {
 
     class layerParam {
@@ -24,6 +27,7 @@ namespace SCore {
         vec3 hsb_mod;
         vec4 color_bias;
         vec4 color_mod;
+        blendMode blend;
     public:
         layerParam();
         layerParam(const layerParam& c);

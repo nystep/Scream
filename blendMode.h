@@ -48,7 +48,18 @@ namespace SCore {
         unsigned int blendModeToGL( BlendingMode bm );
     public:
         
+        blendMode() : bm(blendModeToGL(BLEND_REPLACE)) {
+        }
+
         blendMode( BlendingMode _bm ) : bm(blendModeToGL(_bm)) {
+        }
+
+        blendMode(const blendMode& c) {
+            bm = c.bm;
+        }
+        
+        blendMode& operator= (const blendMode& c) {
+            bm = c.bm;
         }
 
         virtual ~blendMode() {
